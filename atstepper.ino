@@ -10,7 +10,7 @@ int men1=7 ; //3 driver
 int men2=4; //4driver 
 int pwminput=6; //6driver
 String elevmasuk;String azmasuk;
-int azimuth; 
+int azimuth, elevasi;
 
 //---------------deklarasi stepper
 #define STEPPER1_DIR_PIN 5
@@ -18,7 +18,10 @@ int azimuth;
 AccelStepper motor_Stepper1(AccelStepper::DRIVER, STEPPER1_STEP_PIN, STEPPER1_DIR_PIN);
 
 //-------------- deklarasi PID motor DC---------------
-double kp = 2, ki = 1.5,  kd = 0.0075;            
+  double kp = 1.85, ki = 0.15,  kd = 0.0095 ;      
+// PID DEBUG TANPA ANTENA
+//double kp = 0.5, ki = 0.1,  kd = 0.0075 ;    
+      
 double input = 0, output = 0, setpoint = 0;
 long temp,a,b,c;
 volatile long encoderPos = 0;
@@ -46,65 +49,95 @@ void setup() {
 }
 
 void loop() {
-   int elevasi;
    
   if (Serial.available() > 0) {
-       azmasuk = Serial.readStringUntil(',');
+      azmasuk = Serial.readStringUntil(',');
        elevmasuk = Serial.readStringUntil('#');
            
   }
+
+
   //convert string azimuth----------------------- 
-       azimuth = azmasuk.toInt ();
+  //	if ( azmasuk.toInt() > 0 && azmasuk.toInt() < 360 ) {
+
+     //  azimuth = azmasuk.toInt ();
+  	//}
+      azimuth = azmasuk.toInt ();
        a= map(azimuth, 0,180, 400,800)*-7 ; //a b dipalao jika angin ke arah utara
        b= map(azimuth, 181,359, 0,399)*-7;
        
        c=map(azimuth, 0,360, 0,800)*-7; // c dipakai jika angin ke arah selatan
   //---------------------------------------------
 
-  //convert string elevasi-----------------------     
-       elevasi =  elevmasuk.toDouble() * 3.2;
-       if (elevasi >=1 && elevasi <= 96)
-       {
-        setpoint = 96;
-       }
-       else
-       {
-        setpoint = elevasi;
-       }
-       
-       
+  
+  //DEBUG---------------------------------
+     /*  setpoint = elevmasuk.toDouble() * 3.2;
        input = encoderPos ;                                // data from encoder
-       myPID.Compute();   //PID running
-
-  //elevasi run-----------------------                                            
+       myPID.Compute();   //PID running                                         
        pwmOut(output);
   //----------------------------------
+    */
+  
+  //convert string elevasi-----------------------   
+//   if (elevmasuk.toDouble() > 0 && elevmasuk.toDouble() < 90) {
+   		elevasi = elevmasuk.toDouble()*3.2;
+  // }
+   
+   if (elevasi > 0 && elevasi <=32)
+   {
+    setpoint = 32;
+   }
+   else if (elevasi > 272)
+   {
+     setpoint = 272;    
+   }
+   else 
+   {
+    setpoint = elevasi;
+   }
+   
+   input = encoderPos;
+   myPID.Compute();
+   pwmOut(output);
 
    //azimuth run----------------------
+   
+  //LOGIC 1 ANGIN ARAH SELATAN
+  /*
+   if (c >  5600)
+   {
+     motor_Stepper1.runToNewPosition(5600);
+   }
+   else
+   {
+     motor_Stepper1.runToNewPosition(c);
+   }  
 
-        motor_Stepper1.runToNewPosition(c); //dipakai jika angin utara jika angin selatan di comand
-          motor_Stepper1.run();
-          
-          //dipakai jika angin selain jika angin utara di comand
-          /*
-          //dipakai jika angin utara jika angin selatan di comand
+   motor_Stepper1.run();
+   //-------------------------------------
+
+*/
+   //LOGIC 2 ANGIN ARAH UTARA
+
        if ((azimuth >= 0) && (azimuth <= 180))
       {
           motor_Stepper1.runToNewPosition(a);
           motor_Stepper1.run();
-          //Serial.print(a);Serial.println(" ");
       }
+      
        else if ((azimuth >= 181) &&  (azimuth <=360))
       {
           motor_Stepper1.runToNewPosition(b);
           motor_Stepper1.run();
-       //   Serial.print(b);Serial.println(" ");
       }
-       else
+      
+       else if (azimuth > 360)
       {
-  
+        motor_Stepper1.runToNewPosition(5600);
+        motor_Stepper1.run();
       } 
-      */
+ 
+      
       //-----------------------------------
        Serial.print("encoder   :");Serial.print(encoderPos);Serial.print("  ");
        Serial.print("setpoint :");Serial.print(" ");Serial.print(setpoint);   
